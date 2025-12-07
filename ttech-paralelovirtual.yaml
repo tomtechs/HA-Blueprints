@@ -1,11 +1,11 @@
 blueprint:
-  name: Paralelo Virtual (Compatível e Anti-Loop Final)
-  description: Sincroniza switches/lâmpadas como paralelo virtual, sem loop e compatível com todas as versões.
+  name: Paralelo Virtual (Compatível e Anti-Loop Final v2)
+  description: Sincroniza switches/lâmpadas como paralelo virtual, sem loop e compatível com todas as versões do Home Assistant.
   domain: automation
 
   input:
     entidades:
-      name: Entidades que farão parte do paralelo
+      name: Entidades do paralelo
       selector:
         entity:
           multiple: true
@@ -18,7 +18,14 @@ trigger:
   entity_id: !input entidades
 
 action:
+
+  # 0) Linha obrigatória para máxima compatibilidade com versões antigas do HA
+  - delay: 0.001
+
+  # 1) Decide se vai ligar ou desligar
   - choose:
+
+      # LIGAR
       - conditions: "{{ trigger.to_state.state == 'on' }}"
         sequence:
           - service: homeassistant.turn_on
@@ -28,6 +35,7 @@ action:
                 {% set todos = expand(inputs.entidades) | map(attribute='entity_id') | list %}
                 {{ todos | reject('equalto', origem) | list }}
 
+      # DESLIGAR
       - conditions: "{{ trigger.to_state.state == 'off' }}"
         sequence:
           - service: homeassistant.turn_off
