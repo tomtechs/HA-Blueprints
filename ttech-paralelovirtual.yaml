@@ -2,41 +2,34 @@ blueprint:
   name: Paralelo Virtual TomTech
   description: Sincroniza múltiplos switches/luzes para funcionarem como um único ponto de controle virtual.
   domain: automation
-
   input:
-    dispositivos:
-      name: Selecionar Dispositivos
-      description: Escolha todos os switches e lights que devem atuar em paralelo.
+    entrada_switchs:
+      name: Escolha os pontos de Iluminação
       selector:
-        entity:
-          domain:
-            - switch
-            - light
-          multiple: true
-
-mode: restart
-max_exceeded: silent
+            entity:
+              domain:
+                - switch
+                - light
+              multiple: true
 
 trigger:
-  - platform: state
-    entity_id: !input dispositivos
+  platform: state
+  entity_id: !input entrada_switchs
 
 action:
-  - variables:
-      estado: "{{ trigger.to_state.state }}"
+  - service: >
+      {% if trigger.to_state.state == "on" %}
+        homeassistant.turn_on
+      {% elif trigger.to_state.state == "off" %}
+        homeassistant.turn_off
+      {% endif %}
+    target:
+      entity_id:
+        !input entrada_switchs
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 2
+      milliseconds: 0
 
-  - choose:
-      - conditions: "{{ estado == 'on' }}"
-        sequence:
-          - service: homeassistant.turn_on
-            target:
-              entity_id: !input dispositivos
-
-      - conditions: "{{ estado == 'off' }}"
-        sequence:
-          - service: homeassistant.turn_off
-            target:
-              entity_id: !input dispositivos
-
-  # Pequeno delay para evitar congestionamento em dispositivos Zigbee/Wi-Fi
-  - delay: "00:00:02"
+mode: single
