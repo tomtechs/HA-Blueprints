@@ -1,6 +1,6 @@
 blueprint:
-  name: Paralelo Virtual TomTech
-  description: Sincroniza múltiplos switches/luzes para funcionarem como um único ponto de controle virtual.
+  name: Paralelo Virtual TomTech (Anti-Loop)
+  description: Sincroniza switches/lights sem loops, ignorando o dispositivo que iniciou a ação.
   domain: automation
 
   input:
@@ -21,22 +21,24 @@ trigger:
   - platform: state
     entity_id: !input dispositivos
 
-action:
-  - variables:
-      estado: "{{ trigger.to_state.state }}"
+variables:
+  origem: "{{ trigger.entity_id }}"
+  estado: "{{ trigger.to_state.state }}"
+  grupo: !input dispositivos
+  destino: "{{ grupo | reject('equalto', origem) | list }}"
 
+action:
   - choose:
       - conditions: "{{ estado == 'on' }}"
         sequence:
           - service: homeassistant.turn_on
             target:
-              entity_id: !input dispositivos
+              entity_id: "{{ destino }}"
 
       - conditions: "{{ estado == 'off' }}"
         sequence:
           - service: homeassistant.turn_off
             target:
-              entity_id: !input dispositivos
+              entity_id: "{{ destino }}"
 
-  # Pequeno delay para evitar congestionamento em dispositivos Zigbee/Wi-Fi
   - delay: "00:00:01"
