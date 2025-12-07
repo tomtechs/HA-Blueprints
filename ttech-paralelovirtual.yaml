@@ -1,56 +1,39 @@
 blueprint:
-  name: Paralelo Virtual TomTech (Blindado)
-  description: Sincroniza entidades sem loop, com debounce e trava de execução.
+  name: Paralelo Virtual (Seguro e Anti-Loop)
+  description: Sincroniza múltiplos switches/lâmpadas como um único paralelo virtual, sem loop.
   domain: automation
 
   input:
-    dispositivos:
-      name: Selecionar Dispositivos
+    entidades:
+      name: Entidades que farão parte do paralelo
       selector:
         entity:
-          domain: 
+          multiple: true
+          domain:
             - switch
             - light
-          multiple: true
-
-mode: restart
-max_exceeded: silent
 
 trigger:
-  - platform: state
-    entity_id: !input dispositivos
+  platform: state
+  entity_id: !input entidades
 
 variables:
-  grupo: !input dispositivos
+  todas: !input entidades
   origem: "{{ trigger.entity_id }}"
-  estado: "{{ trigger.to_state.state }}"
-  destino: "{{ grupo | reject('equalto', origem) | list }}"
+  destino: "{{ expand(todas) | map(attribute='entity_id') | reject('equalto', origem) | list }}"
 
 action:
-  # ------ PROTEÇÃO 1 – DEBOUNCE ------
-  - wait_for_trigger:
-      - platform: state
-        entity_id: "{{ origem }}"
-    timeout: "00:00:00.3"
-    continue_on_timeout: true
-
-  # ------ PROTEÇÃO 2 – LOCK ------
-  - condition: >
-      {{ not is_state('automation.' ~ this.entity_id.split('.')[1], 'off') }}
-
-  # ------ EXECUÇÃO PRINCIPAL ------
   - choose:
-      - conditions: "{{ estado == 'on' }}"
+      - conditions: "{{ destino | length > 0 }}"
         sequence:
-          - service: homeassistant.turn_on
+          - service: >
+              {% if trigger.to_state.state == "on" %}
+                homeassistant.turn_on
+              {% else %}
+                homeassistant.turn_off
+              {% endif %}
             target:
               entity_id: "{{ destino }}"
 
-      - conditions: "{{ estado == 'off' }}"
-        sequence:
-          - service: homeassistant.turn_off
-            target:
-              entity_id: "{{ destino }}"
-
-  # Pequeno delay para estabilização dos estados
-  - delay: "00:00:00.4"
+mode: queued
+max: 10
