@@ -1,15 +1,14 @@
 blueprint:
-  name: Paralelo Virtual TomTech (Anti-Loop)
-  description: Sincroniza switches/lights sem loops, ignorando o dispositivo que iniciou a ação.
+  name: Paralelo Virtual TomTech (Blindado)
+  description: Sincroniza entidades sem loop, com debounce e trava de execução.
   domain: automation
 
   input:
     dispositivos:
       name: Selecionar Dispositivos
-      description: Escolha todos os switches e lights que devem atuar em paralelo.
       selector:
         entity:
-          domain:
+          domain: 
             - switch
             - light
           multiple: true
@@ -22,12 +21,24 @@ trigger:
     entity_id: !input dispositivos
 
 variables:
+  grupo: !input dispositivos
   origem: "{{ trigger.entity_id }}"
   estado: "{{ trigger.to_state.state }}"
-  grupo: !input dispositivos
   destino: "{{ grupo | reject('equalto', origem) | list }}"
 
 action:
+  # ------ PROTEÇÃO 1 – DEBOUNCE ------
+  - wait_for_trigger:
+      - platform: state
+        entity_id: "{{ origem }}"
+    timeout: "00:00:00.3"
+    continue_on_timeout: true
+
+  # ------ PROTEÇÃO 2 – LOCK ------
+  - condition: >
+      {{ not is_state('automation.' ~ this.entity_id.split('.')[1], 'off') }}
+
+  # ------ EXECUÇÃO PRINCIPAL ------
   - choose:
       - conditions: "{{ estado == 'on' }}"
         sequence:
@@ -41,4 +52,5 @@ action:
             target:
               entity_id: "{{ destino }}"
 
-  - delay: "00:00:01"
+  # Pequeno delay para estabilização dos estados
+  - delay: "00:00:00.4"
