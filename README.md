@@ -24,74 +24,76 @@ Desenvolvido com foco em simplicidade, eficiência e confiabilidade.
 
 ---
 
-# 📁 Blueprint YAML
-
-```yaml
-blueprint:
-  name: Paralelo Virtual TomTech
-  description: Sincroniza múltiplos switches/luzes para funcionarem como um único ponto de controle virtual.
-  domain: automation
-
-  input:
-    dispositivos:
-      name: Selecionar Dispositivos
-      description: Escolha todos os switches e lights que devem atuar em paralelo.
-      selector:
-        entity:
-          domain:
-            - switch
-            - light
-          multiple: true
-
-mode: restart
-max_exceeded: silent
-
-trigger:
-  - platform: state
-    entity_id: !input dispositivos
-
-action:
-  - variables:
-      estado: "{{ trigger.to_state.state }}"
-
-  - choose:
-      - conditions: "{{ estado == 'on' }}"
-        sequence:
-          - service: homeassistant.turn_on
-            target:
-              entity_id: !input dispositivos
-
-      - conditions: "{{ estado == 'off' }}"
-        sequence:
-          - service: homeassistant.turn_off
-            target:
-              entity_id: !input dispositivos
-
-  # Pequeno delay para evitar congestionamento em dispositivos Zigbee/Wi-Fi
-  - delay: "00:00:01"
-
-
----
-
-# 📦 Funcionalidades
-  🚀 Como instalar
+🚀 Como instalar
 1. Acesse o Home Assistant
+
 Configurações → Automações e Cenas → Blueprints
+
 Clique em Importar Blueprint
+
 2. Cole o link deste repositório
+
 (URL do seu GitHub)
 
 3. Após importar
+
 Clique em Criar automação usando este blueprint
+
 Escolha todos os dispositivos que farão parte do paralelo virtual
 
 4. Salve e teste
+
 Acione qualquer dispositivo
+
 Todos serão atualizados automaticamente
 
+🧪 Exemplo de uso
+💡 Cenário:
+
+Você possui:
+
+switch.sala_lustre
+
+light.sala_led
+
+switch.sala_abajur
+
+Com o blueprint configurado, ao ligar qualquer um, os outros dois ligam juntos.
+Ao desligar qualquer um, todos desligam.
+
 🛠️ Boas práticas TomTech
+
 Utilize nomes claros nos dispositivos (ex.: sala_lustre, sala_abajur)
+
 Evite misturar dispositivos com latência muito diferente
+
 Se usar Zigbee, mantenha um delay curto (1s é ideal)
+
 Teste acionamentos físicos e via assistente de voz
+
 Evite adicionar dispositivos com comportamento especial (ex.: dimmers RF)
+
+📄 Changelog
+v1.0 — Primeira versão pública
+
+Código otimizado
+
+Reescrita completa e organizada
+
+Adicionado modo restart
+
+Lógica com variables e choose
+
+Delay otimizado para estabilidade
+
+👨‍💻 Autor
+
+Tom Tech (Thomaz Melo)
+Automação Residencial • Home Assistant • Homelab
+Instagram: @tomtechs
+YouTube: youtube.com/@TomTechs
+
+⭐ Gostou do blueprint?
+
+Deixe uma estrela ⭐ no repositório para apoiar o projeto!
+Siga o Tom Tech para mais conteúdos de automação residencial.
