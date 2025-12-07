@@ -1,11 +1,11 @@
 blueprint:
-  name: Paralelo Virtual (Seguro e Anti-Loop)
-  description: Sincroniza múltiplos switches/lâmpadas como um único paralelo virtual, sem loop.
+  name: Paralelo Virtual (Compatível e Anti-Loop)
+  description: Sincroniza múltiplos switches/lâmpadas como se estivessem em paralelo, sem loop.
   domain: automation
 
   input:
     entidades:
-      name: Entidades que farão parte do paralelo
+      name: Entidades do paralelo virtual
       selector:
         entity:
           multiple: true
@@ -20,20 +20,34 @@ trigger:
 variables:
   todas: !input entidades
   origem: "{{ trigger.entity_id }}"
-  destino: "{{ expand(todas) | map(attribute='entity_id') | reject('equalto', origem) | list }}"
+  destino: >
+    {{ expand(todas)
+        | map(attribute='entity_id')
+        | reject('equalto', origem)
+        | list }}
 
 action:
+
+  - variables:
+      estado_atual: "{{ trigger.to_state.state }}"
+
   - choose:
       - conditions: "{{ destino | length > 0 }}"
         sequence:
-          - service: >
-              {% if trigger.to_state.state == "on" %}
-                homeassistant.turn_on
-              {% else %}
-                homeassistant.turn_off
-              {% endif %}
-            target:
-              entity_id: "{{ destino }}"
+
+          - service: homeassistant.turn_on
+            data:
+              entity_id: >
+                {% if estado_atual == 'on' %}
+                  {{ destino }}
+                {% endif %}
+
+          - service: homeassistant.turn_off
+            data:
+              entity_id: >
+                {% if estado_atual == 'off' %}
+                  {{ destino }}
+                {% endif %}
 
 mode: queued
-max: 10
+max: 5
