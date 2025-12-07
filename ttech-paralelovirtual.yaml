@@ -1,11 +1,11 @@
 blueprint:
   name: Paralelo Virtual (Compatível e Anti-Loop)
-  description: Sincroniza múltiplos switches/lâmpadas como se estivessem em paralelo, sem loop.
+  description: Sincroniza switches/lâmpadas como se estivessem em paralelo físico.
   domain: automation
 
   input:
     entidades:
-      name: Entidades do paralelo virtual
+      name: Entidades do paralelo
       selector:
         entity:
           multiple: true
@@ -17,37 +17,29 @@ trigger:
   platform: state
   entity_id: !input entidades
 
-variables:
-  todas: !input entidades
-  origem: "{{ trigger.entity_id }}"
-  destino: >
-    {{ expand(todas)
-        | map(attribute='entity_id')
-        | reject('equalto', origem)
-        | list }}
-
 action:
 
-  - variables:
-      estado_atual: "{{ trigger.to_state.state }}"
+  # 1. Calcula dinamicamente quem deve receber o comando
+  - set:
+      destino: >
+        {% set todos = expand( inputs.entidades ) %}
+        {% set origem = trigger.entity_id %}
+        {{ todos | map(attribute='entity_id') | reject('equalto', origem) | list }}
 
+  # 2. Executa ON
   - choose:
-      - conditions: "{{ destino | length > 0 }}"
+      - conditions: "{{ trigger.to_state.state == 'on' }}"
         sequence:
-
           - service: homeassistant.turn_on
             data:
-              entity_id: >
-                {% if estado_atual == 'on' %}
-                  {{ destino }}
-                {% endif %}
+              entity_id: "{{ destino }}"
 
+  # 3. Executa OFF
+      - conditions: "{{ trigger.to_state.state == 'off' }}"
+        sequence:
           - service: homeassistant.turn_off
             data:
-              entity_id: >
-                {% if estado_atual == 'off' %}
-                  {{ destino }}
-                {% endif %}
+              entity_id: "{{ destino }}"
 
 mode: queued
 max: 5
