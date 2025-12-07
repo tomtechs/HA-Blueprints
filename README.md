@@ -70,8 +70,10 @@ action:
   # Pequeno delay para evitar congestionamento em dispositivos Zigbee/Wi-Fi
   - delay: "00:00:01"
 
+
 ---
 
+# 📦 Funcionalidades
   🚀 Como instalar
 1. Acesse o Home Assistant
 Configurações → Automações e Cenas → Blueprints
