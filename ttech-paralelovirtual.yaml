@@ -1,6 +1,6 @@
 blueprint:
-  name: Paralelo Virtual (Compatível e Anti-Loop Final v2)
-  description: Sincroniza switches/lâmpadas como paralelo virtual, sem loop e compatível com todas as versões do Home Assistant.
+  name: Paralelo Virtual (Compatível Universal)
+  description: Sincroniza múltiplos switches/lâmpadas como paralelo virtual.
   domain: automation
 
   input:
@@ -18,32 +18,16 @@ trigger:
   entity_id: !input entidades
 
 action:
+  - service: >
+      {% if trigger.to_state.state == 'on' %}
+        homeassistant.turn_on
+      {% else %}
+        homeassistant.turn_off
+      {% endif %}
+    data:
+      entity_id: >
+        {% set origem = trigger.entity_id %}
+        {% set todos = expand(inputs.entidades) | map(attribute='entity_id') | list %}
+        {{ todos | reject('equalto', origem) | list }}
 
-  # 0) Linha obrigatória para máxima compatibilidade com versões antigas do HA
-  - delay: 0.001
-
-  # 1) Decide se vai ligar ou desligar
-  - choose:
-
-      # LIGAR
-      - conditions: "{{ trigger.to_state.state == 'on' }}"
-        sequence:
-          - service: homeassistant.turn_on
-            data:
-              entity_id: >
-                {% set origem = trigger.entity_id %}
-                {% set todos = expand(inputs.entidades) | map(attribute='entity_id') | list %}
-                {{ todos | reject('equalto', origem) | list }}
-
-      # DESLIGAR
-      - conditions: "{{ trigger.to_state.state == 'off' }}"
-        sequence:
-          - service: homeassistant.turn_off
-            data:
-              entity_id: >
-                {% set origem = trigger.entity_id %}
-                {% set todos = expand(inputs.entidades) | map(attribute='entity_id') | list %}
-                {{ todos | reject('equalto', origem) | list }}
-
-mode: queued
-max: 5
+mode: restart
